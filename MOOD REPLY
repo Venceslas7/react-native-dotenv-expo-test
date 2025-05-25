@@ -1,0 +1,103 @@
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import HomeScreen from './screens/HomeScreen';
+import LoginScreen from './screens/LoginScreen';
+import PaymentScreen from './screens/PaymentScreen';
+
+const Stack = createNativeStackNavigator();
+
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Login">
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Payment" component={PaymentScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+const analyzeEmotion = async (text) => {
+  const response = await fetch("https://api-inference.huggingface.co/models/michelangelo/autonlp-emotion-detection", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer YOUR_HUGGINGFACE_API_KEY`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ inputs: text })
+  });
+  const data = await response.json();
+  return data[0].label; // ex: "joy", "anger", etc.
+};
+const generateReply = async (emotion, context) => {
+  const prompt = `Tu es un assistant émotionnel. Tu dois répondre à ce message avec un ton ${emotion} : ${context}`;
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer YOUR_OPENAI_API_KEY`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  const json = await response.json();
+  return json.choices[0].message.content.trim();
+};
+const translateText = async (text, targetLang) => {
+  const response = await fetch(`https://translation.googleapis.com/language/translate/v2?key=YOUR_API_KEY`, {
+    method: 'POST',
+    body: JSON.stringify({
+      q: text,
+      target: targetLang,
+      format: 'text'
+    }),
+    headers: { 'Content-Type': 'application/json' }
+  });
+  const data = await response.json();
+  return data.data.translations[0].translatedText;
+};
+const initiatePayment = async () => {
+  const response = await fetch("https://api.flutterwave.com/v3/payments", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer YOUR_FLUTTERWAVE_SECRET_KEY",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      tx_ref: "MOODREPLY_001",
+      amount: 3,
+      currency: "USD",
+      redirect_url: "https://your-app.com/verify",
+      payment_options: "card, mobilemoneyghana, ussd, paypal",
+      customer: {
+        email: "user@example.com",
+        phonenumber: "070********",
+        name: "Nom utilisateur"
+      },
+      customizations: {
+        title: "Abonnement MOOD REPLY",
+        description: "Accès illimité à l'app après les 7 jours gratuits"
+      }
+    })
+  });
+  return await response.json();
+};
+// Lors de l'inscription
+const user = {
+  email: "user@example.com",
+  signupDate: new Date().toISOString(),
+  subscribed: false,
+};
+
+const isFreeTrialExpired = (signupDate) => {
+  const now = new Date();
+  const start = new Date(signupDate);
+  const diffDays = (now - start) / (1000 * 3600 * 24);
+  return diffDays > 7;
+};
+OPENAI_API_KEY=sk-...
+HUGGINGFACE_API_KEY=hf_...
+FLUTTERWAVE_SECRET_KEY=FLWSECK_...
